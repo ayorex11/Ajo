@@ -1,14 +1,14 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from .models import SavingsPlan, Transaction
-from .serializers import SavingsPlanSerializer, TransactionSerializer
+from .serializers import SavingsPlanSerializer, TransactionSerializer, FilterTransactionsByDateSerializer
 from drf_yasg.utils import swagger_auto_schema
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from django.db import transaction
 import random
-from decimal import Decimal, ROUND_UP
+from decimal import ROUND_UP
 
 def create_plan_id():
     return ''.join([str(random.randint(0, 9)) for _ in range(4)])
@@ -58,4 +58,124 @@ def create_savings_plan(request):
 
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_savings_plans(request):
+    user = request.user
+    plans = SavingsPlan.objects.filter(user=user)
+    serializer = SavingsPlanSerializer(plans, many=True)
+    data = {'message':'success',
+            'data': serializer.data}
+    return Response(data, status=status.HTTP_200_OK)
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])     
+def get_saving_plan(request, plan_id):
+    user = request.user
+    try:
+        plan = SavingsPlan.objects.get(user=user, plan_id=plan_id)
+    except SavingsPlan.DoesNotExist:
+        return Response({'error': 'Savings plan not found.'}, status=status.HTTP_404_NOT_FOUND)
+    serializer = SavingsPlanSerializer(plan)
+    data = {'message':'success',
+            'data': serializer.data}   
+    return Response(data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+
+def get_active_savings_plans(request):
+    user = request.user
+    plans = SavingsPlan.objects.filter(user=user, active=True)
+    serializer = SavingsPlanSerializer(plans, many=True)
+    data = {'message':'success',
+            'data': serializer.data}
+    return Response(data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+
+def get_transactions(request):
+    user = request.user
+    transactions = Transaction.objects.filter(user=user)
+    serializer = TransactionSerializer(transactions, many=True)
+    data = {'message':'success',
+            'data': serializer.data}
+    return Response(data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])  
+@permission_classes([IsAuthenticated])
+
+def get_deposit_transactions(request):
+    user = request.user
+    transactions = Transaction.objects.filter(user=user, type='Deposit')
+    serializer = TransactionSerializer(transactions, many=True)
+    data = {'message':'success',
+            'data': serializer.data}
+    return Response(data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+
+def get_withdrawal_transactions(request):
+    user = request.user
+    transactions = Transaction.objects.filter(user=user, type='Withdrawal')
+    serializer = TransactionSerializer(transactions, many=True)
+    data = {'message':'success',
+            'data': serializer.data}    
+    return Response(data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+
+def get_completed_transactions(request):
+    user = request.user
+    transactions = Transaction.objects.filter(user=user, completed=True)
+    serializer = TransactionSerializer(transactions, many=True)
+    data = {'message':'success',
+            'data': serializer.data}    
+    return Response(data, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(methods=['GET'], query_serializer=FilterTransactionsByDateSerializer)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def filter_transactions_by_date(request):
+    user = request.user
+    serializer = FilterTransactionsByDateSerializer(data=request.query_params)
+    
+    serializer.is_valid(raise_exception=True)
+    
+    start_date = serializer.validated_data['start_date']
+    end_date = serializer.validated_data['end_date']
+    
+    end_date_inclusive = end_date + timezone.timedelta(days=1)
+    
+    transactions = Transaction.objects.filter(
+        user=user, 
+        date_created__date__gte=start_date,
+        date_created__date__lt=end_date_inclusive
+    )
+    
+    serializer = TransactionSerializer(transactions, many=True)
+    data = {
+        'message': 'success',
+        'count': transactions.count(),
+        'data': serializer.data
+    }    
+    return Response(data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+
+def get_transaction_by_reference(request, reference):
+    user = request.user
+    try:
+        transaction = Transaction.objects.get(user=user, transaction_reference=reference)
+    except Transaction.DoesNotExist:
+        return Response({'error': 'Transaction not found.'}, status=status.HTTP_404_NOT_FOUND)
+    serializer = TransactionSerializer(transaction)
+    data = {'message':'success',
+            'data': serializer.data}    
+    return Response(data, status=status.HTTP_200_OK)
