@@ -1,0 +1,11 @@
+{% load i18n %}{% autoescape off %}{% blocktrans with site_name="AJO" %}{% endblocktrans %}
+
+{% block content %}{% endblock %}
+
+{% blocktrans with site_name="AJO" site_domain="AJO.com" %}
+Thank you for choosing {{site_name}} for your monetary needs. We look forward to helping you budget your money properly.
+
+Best regards,
+The {{site_name}} Team
+{{ site_domain }}{% endblocktrans %}
+{% endautoescape %}
