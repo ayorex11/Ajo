@@ -45,4 +45,5 @@ urlpatterns = [
     path('Account/', include('Account.urls')),
     path('Verification/', include('Verification.urls')),
     path('Plans/', include('Plans.urls')),
+    path('Payment/', include('Payment.urls')),
 ]
